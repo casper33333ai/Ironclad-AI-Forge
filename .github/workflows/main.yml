@@ -1,0 +1,52 @@
+name: ironclad-forge-v14-9
+on: [push, workflow_dispatch]
+jobs:
+  forge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: ⚙️ System Validation
+        run: |
+          echo "🔍 Runner Environment Check"
+          node -v
+          npm -v
+          google-chrome --version || echo "Chrome not found"
+          
+      - name: 📦 Install Ironclad Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y             libgbm-dev libnss3 libatk-bridge2.0-0 libgtk-3-0 libasound2             libxshmfence-dev libxkbcommon0 libxcomposite1 libxdamage1             libxrandr2 libpango-1.0-0 libcairo2 libasound2 google-chrome-stable
+          
+      - name: ⚙️ Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          
+      - name: 🛡️ Bootstrap JS Modules
+        run: |
+          npm install puppeteer-extra puppeteer-extra-plugin-stealth @capacitor/core@latest @capacitor/cli@latest @capacitor/android@latest
+          # Ensure Puppeteer has a fallback browser if system chrome fails
+          npx puppeteer browsers install chrome
+          
+      - name: 🕶️ Scrape (Ironclad Protocol)
+        run: node scraper.js
+        env:
+          AI_URL: ${{ secrets.AI_URL }}
+          SESSION_COOKIES: ${{ secrets.SESSION_COOKIES }}
+          CHROME_PATH: /usr/bin/google-chrome-stable
+          
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'zulu'
+          
+      - name: 🏗️ Forge APK
+        run: node convert-to-apk.js
+        
+      - name: 📦 Deliver Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ironclad-AI-Native-V14-9-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
